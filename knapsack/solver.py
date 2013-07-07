@@ -25,12 +25,27 @@ def solveIt(inputData):
 
     # value, weight, taken = naive(weights, values, capacity)
     value, weight, taken = dynamic(weights, values, capacity)
+    verify(taken, value, values, weight, weights)
     
     # prepare the solution in the specified output format
     outputData = str(value) + ' ' + str(0) + '\n'
     outputData += ' '.join(map(str, taken))
     return outputData
 
+def verify(taken, objective, values, weight, weights):
+    """
+    """
+    import itertools
+    
+    taken_value_sum  = sum(itertools.compress(values, taken))
+    taken_weight_sum = sum(itertools.compress(weights, taken))
+    
+    if objective != taken_value_sum:
+        print 'objective {} does not match taken_value_sum: {}, taken: {}'.format(objective, taken_value_sum, taken)
+    
+    if weight != taken_weight_sum:
+        print 'weight {} does not match taken_weight_sum: {}, taken: {}'.format(weight, taken_weight_sum, taken)
+    
 def naive(weights, values, capacity):
     # a trivial greedy algorithm for filling the knapsack
     # it takes items in-order until the knapsack is full
@@ -52,13 +67,13 @@ def naive(weights, values, capacity):
     return (value, weight, taken)
 
 def dynamic(weights, values, capacity):
-    table = [[0 for x in range(0, len(weights))] for y in range(0,capacity+1)]
+    table = [[0 for x in range(0, len(weights))] for y in xrange(0,capacity+1)]
     maxi = maxj = 0
     
-    for i in range(capacity+1):
+    for i in xrange(capacity+1):
         for j in range(len(weights)):
             if j == 0 and i >= weights[j]:
-                table[i][j] = weights[j]
+                table[i][j] = values[j]
                 continue
                 
             if (i >= weights[j]):
@@ -73,15 +88,14 @@ def dynamic(weights, values, capacity):
     i = capacity; j = len(weights)-1
     value = table[i][j]
     
-    while i > 0: 
-        while j >= 0:
-            if (table[i][j] != table[i][j-1]):
-                taken.insert(0, 1)
-                weight += weights[j]
-                i -= weights[j]
-            else:
-                taken.insert(0,0)
-            j -= 1
+    while i > 0 and j >= 0:
+        if (table[i][j] != table[i][j-1]):
+            taken.insert(0, 1)
+            weight += weights[j]
+            i -= weights[j]
+        else:
+            taken.insert(0,0)
+        j -= 1
 
     return (value, weight, taken)
                 
