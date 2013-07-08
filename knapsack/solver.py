@@ -24,7 +24,8 @@ def solveIt(inputData):
 
 
     # value, weight, taken = naive(weights, values, capacity)
-    value, weight, taken = dynamic(weights, values, capacity)
+    # value, weight, taken = dynamic(weights, values, capacity)
+    value, weight, taken = dynamic_optimized(weights, values, capacity)
     verify(taken, value, values, weight, weights)
     
     # prepare the solution in the specified output format
@@ -67,7 +68,7 @@ def naive(weights, values, capacity):
     return (value, weight, taken)
 
 def dynamic(weights, values, capacity):
-    table = [[0 for x in range(0, len(weights))] for y in xrange(0,capacity+1)]
+    table = [[0 for y in range(len(weights))] for x in xrange(0,capacity+1)]
     maxi = maxj = 0
     
     for i in xrange(capacity+1):
@@ -98,7 +99,38 @@ def dynamic(weights, values, capacity):
         j -= 1
 
     return (value, weight, taken)
+
+def dynamic_optimized(weights, values, capacity):
+    """
+    """
+    import bitarray
+    
+    table = [[{'value': 0, 'pre':bitarray.bitarray()} for y in range(2)] for x in xrange(0,capacity+1)]
+    for j in range(len(weights)):
+        for i in xrange(capacity+1):
+            if j == 0 and i >= weights[j]:
+                table[i][j&1] = {'value':values[j],'pre':bitarray.bitarray(1)}
+                continue
                 
+            if (i >= weights[j]):
+                if (table[i-weights[j]][~j&1]['value'] + values[j] > table[i][~j&1]['value']):
+                    table[i][j&1] = {'value':table[i-weights[j]][~j&1]['value'] + values[j], 
+                                     'pre': bitarray.bitarray(table[i-weights[j]][~j&1]['pre'])}
+                    table[i][j&1]['pre'].append(1)
+                else:
+                    table[i][j&1] = {'value':table[i][~j&1]['value'], 'pre': bitarray.bitarray(table[i][~j&1]['pre'])}
+                    table[i][j&1]['pre'].append(0)
+            else:
+                table[i][j&1] = {'value':table[i][~j&1]['value'], 'pre': bitarray.bitarray(table[i][~j&1]['pre'])}
+                table[i][j&1]['pre'].append(0)
+
+    maxj = max(enumerate(table[capacity]), key=lambda x: x[1]['value'])[0]
+    taken = [[0,1][x] for x in table[capacity][maxj]['pre'].tolist()]
+    weight = sum([weights[i] if ex else 0 for i,ex in enumerate(taken)])
+    value = table[capacity][maxj]['value']
+
+    return (value, weight, taken)
+    
 import sys
 
 if __name__ == '__main__':
