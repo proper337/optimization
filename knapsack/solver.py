@@ -1,6 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import collections
+import math
+import bitarray
 
 def solveIt(inputData):
     # Modify this code to run your optimization algorithm
@@ -25,7 +28,8 @@ def solveIt(inputData):
 
     # value, weight, taken = naive(weights, values, capacity)
     # value, weight, taken = dynamic(weights, values, capacity)
-    value, weight, taken = dynamic_optimized(weights, values, capacity)
+    # value, weight, taken = dynamic_optimized(weights, values, capacity)
+    value, weight, taken = bb(weights, values, capacity)
     verify(taken, value, values, weight, weights)
     
     # prepare the solution in the specified output format
@@ -130,7 +134,82 @@ def dynamic_optimized(weights, values, capacity):
     value = table[capacity][maxj]['value']
 
     return (value, weight, taken)
+
+def bb(weights, values, capacity):
+    # re-order items in ascending value/weight order
+    ratio_order = sorted([ i for i in range(len(weights))], key=lambda x: (values[x]/float(weights[x]), -x))
     
+    weights = [weights[x] for x in ratio_order]
+    values  = [values[x]  for x in ratio_order]
+
+    sys.setrecursionlimit(10100)
+    feasible = {'value':0, 'path': None}
+    do_bb(depth=0, path=[], accumulated=0, leftover=capacity, 
+                     estimate=do_estimate(0, weights, values, capacity, initial=0), 
+                     feasible=feasible, 
+                     weights=weights, 
+                     values=values)
+    
+    if (feasible['path']):
+        value =  sum([values[i]  for i in feasible['path']])
+        weight = sum([weights[i] for i in feasible['path']])
+        taken = [1 if x in feasible['path'] else 0 for x in range(len(weights))]
+        taken = [taken[x] for x in ratio_order]
+        return (value, weight, taken)
+    else:
+        return (None, None, None)
+    
+def do_bb(depth, path, accumulated, leftover, estimate, feasible, weights, values):
+    assert len(values) == len(weights)
+
+    # print 'weights: {}'.format(weights)
+    # print 'values:  {}'.format(values)
+    # print 'depth:  {}'.format(depth)
+    # print 'path:    {}'.format(path)
+    # print 'accumulated:  {}'.format(accumulated)
+    # print 'leftover:  {}'.format(leftover)
+    # print 'estimate: {}'.format(estimate)
+    # print 'feasible:{}'.format(feasible)
+    
+    if leftover >= 0 and accumulated > feasible['value']:
+        feasible['value'] = accumulated
+        feasible['path'] = path;
+        
+    if len(weights) == depth or leftover < 0 or estimate < feasible['value']:
+        return;
+
+    node_weight = weights[depth]; node_value = values[depth]
+    
+    do_bb(depth + 1, path, accumulated, leftover, do_estimate(depth + 1, weights, values, leftover, initial=accumulated), feasible, weights, values)
+    do_bb(depth + 1, append_path(path, depth), accumulated + node_value, leftover - node_weight, estimate, feasible, weights, values)
+    
+    return
+    
+def append_path(path, num):
+    ret = list(path);
+    ret.append(num)
+    return ret
+        
+def do_estimate(depth, weights, values, capacity, initial):
+    assert len(weights) == len(values)
+    
+    acc_value  = 0
+    acc_weight = 0
+    i = len(weights)-1;
+
+    # whole items
+    while i >= depth and acc_weight + weights[i] <= capacity:
+        acc_value += values[i]
+        acc_weight += weights[i]
+        i -= 1
+        
+    # last fractional item
+    if acc_weight < capacity and depth <= i < len(weights):
+        acc_value += ((values[i]/float(weights[i])) * (capacity-acc_weight))
+
+    # print initial + math.ceil(acc_value)
+    return initial + math.ceil(acc_value)
+            
 import sys
 
 if __name__ == '__main__':
